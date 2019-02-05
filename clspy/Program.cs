@@ -8,6 +8,9 @@ namespace clspy
     sealed class Program
     {
         static Mutex sync = null;
+        static string lockname = "clspy";
+        static string logdir = "c:\\clspy";
+        static string logfile = "c:\\clspy\\clspy.log";
 
         static void Lock()
         {
@@ -17,11 +20,11 @@ namespace clspy
                 {
                     try
                     {
-                        sync = Mutex.OpenExisting("clspy");
+                        sync = Mutex.OpenExisting(lockname);
                     }
                     catch
                     {
-                        sync = new Mutex(false, "clspy");
+                        sync = new Mutex(false, lockname);
                     }
                 }
                 catch
@@ -40,11 +43,20 @@ namespace clspy
 
         static void SaveLog(string workdir, string args, DateTime start, DateTime ended)
         {
+            var duration = ended - start;
+            var started = (DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+
             Lock();
             try
             {
-                var filename = "c:\\clspy.log";
-                File.AppendAllText(filename, String.Format("{},{},{},{}", start, ended, workdir, args));
+                var line = String.Format("{0},{1},{2},{3}\n", started, duration.TotalSeconds, workdir, args);
+                if (File.Exists(logfile))
+                {
+                    File.AppendAllText(logfile, line);
+                } else
+                {
+                    File.WriteAllText(logfile, line);
+                }
             }
             finally
             {
@@ -56,6 +68,25 @@ namespace clspy
         {
             var real_cl = Environment.GetEnvironmentVariable("REAL_CL_EXE");
             var started = DateTime.Now;
+
+            if (real_cl == null)
+            {
+                Console.Error.WriteLine("REAL_CL_EXE not set");
+                Environment.Exit(1);
+            } else
+            {
+                if (!File.Exists(real_cl))
+                {
+                    Console.Error.WriteLine("REAL_CL_EXE '{0}' does not exist", real_cl);
+                    Environment.Exit(1);
+                }
+            }
+
+            if (!Directory.Exists(logdir))
+            {
+                Console.Error.WriteLine("clspy log folder {0} does not exist", logdir);
+                Environment.Exit(1);
+            }
 
             var proc = new Process();
             proc.StartInfo = new ProcessStartInfo(real_cl);
