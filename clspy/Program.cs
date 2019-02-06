@@ -87,7 +87,31 @@ namespace clspy
             proc.StartInfo = new ProcessStartInfo(real);
 
             proc.StartInfo.WorkingDirectory = Environment.CurrentDirectory;
-            proc.StartInfo.Arguments = Environment.CommandLine;
+
+            var cmdargs = "";
+
+            foreach (var word in args)
+            {
+                String w = word;
+                if (w.Contains("\\"))
+                {
+                    w = w.Replace("\\", "\\\\");
+                }
+
+                if (w.Contains("\""))
+                {
+                    w = w.Replace("\"", "\\\"");
+                }
+
+                if (w.Contains(" "))
+                {                    
+                    w = "\"" + w + "\"";
+                }
+
+                cmdargs += " " + w;
+            }
+
+            proc.StartInfo.Arguments = cmdargs;
             proc.StartInfo.UseShellExecute = false;
             foreach (String name in Environment.GetEnvironmentVariables().Keys)
             {
