@@ -66,20 +66,15 @@ namespace clspy
 
         static void Main(string[] args)
         {
-            var real_cl = Environment.GetEnvironmentVariable("REAL_CL_EXE");
-            var started = DateTime.Now;
-
-            if (real_cl == null)
+            int exitcode = 1;
+            var self = Path.GetFullPath(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var self_dir = Path.GetDirectoryName(self);            
+            var real = Path.Combine(self_dir, Path.GetFileNameWithoutExtension(self) + "_orig.exe");
+            
+            if (!File.Exists(real))
             {
-                Console.Error.WriteLine("REAL_CL_EXE not set");
-                Environment.Exit(1);
-            } else
-            {
-                if (!File.Exists(real_cl))
-                {
-                    Console.Error.WriteLine("REAL_CL_EXE '{0}' does not exist", real_cl);
-                    Environment.Exit(1);
-                }
+                Console.Error.WriteLine("'{0}' does not exist", real);
+                Environment.Exit(1);                
             }
 
             if (!Directory.Exists(logdir))
@@ -89,26 +84,32 @@ namespace clspy
             }
 
             var proc = new Process();
-            proc.StartInfo = new ProcessStartInfo(real_cl);
+            proc.StartInfo = new ProcessStartInfo(real);
 
             proc.StartInfo.WorkingDirectory = Environment.CurrentDirectory;
             proc.StartInfo.Arguments = Environment.CommandLine;
-            try
+            proc.StartInfo.UseShellExecute = false;
+            foreach (String name in Environment.GetEnvironmentVariables().Keys)
             {
-                foreach (String name in Environment.GetEnvironmentVariables().Keys)
-                {
-                    proc.StartInfo.EnvironmentVariables[name] = Environment.GetEnvironmentVariable(name);
-                }
-
+                proc.StartInfo.EnvironmentVariables[name] = Environment.GetEnvironmentVariable(name);
+            }
+            var started = DateTime.Now;
+            try
+            {             
                 proc.Start();
                 proc.WaitForExit();
-                var ended = DateTime.Now;
-                SaveLog(Environment.CurrentDirectory, Environment.CommandLine, started, ended);
-                Environment.Exit(proc.ExitCode);
+                exitcode = proc.ExitCode;                
             } catch (Exception err) {
-                Console.Error.WriteLine(err.Message);
-                Environment.Exit(1);
+                Console.Error.WriteLine(err.Message);                
+            } finally
+            {
+                var ended = DateTime.Now;
+                try
+                {
+                    SaveLog(Environment.CurrentDirectory, Environment.CommandLine, started, ended);
+                } catch (Exception e) { }
             }
+            Environment.Exit(exitcode);
         }
     }
 }
