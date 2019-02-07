@@ -44,7 +44,7 @@ namespace clspy
         static void SaveLog(string workdir, string args, DateTime start, DateTime ended)
         {
             var duration = ended - start;
-            var started = (DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+            var started = (DateTime.Now.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
 
             Lock();
             try
